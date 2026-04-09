@@ -10,74 +10,45 @@
     .container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     h1 { font-size: 20px; text-align: center; margin-top: 0; border-bottom: 2px solid #06C755; padding-bottom: 10px; }
     
-    /* メニュー一覧のデザイン */
     .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
-    .menu-info { display: flex; flex-direction: column; }
-    .menu-name { font-weight: bold; font-size: 16px; }
-    .menu-price { color: #666; font-size: 14px; margin-top: 4px; }
-    .menu-item select { width: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+    .menu-info { display: flex; flex-direction: column; width: 65%; }
+    .menu-name { font-weight: bold; font-size: 15px; word-wrap: break-word; }
+    .menu-price { color: #666; font-size: 13px; margin-top: 4px; }
+    .menu-item select { width: 85px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
     
-    .form-group { margin-top: 20px; margin-bottom: 20px; }
-    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; }
+    /* ★売り切れ時のデザイン設定を追加 */
+    .sold-out { opacity: 0.5; background-color: #fbfbfb; }
+    .sold-out .menu-name::after { content: "（完売）"; color: #d9534f; font-size: 12px; margin-left: 8px; font-weight: bold; }
+    .sold-out select { background-color: #eee; color: #999; }
+
+    .form-group { margin-top: 25px; margin-bottom: 20px; background-color: #eafbee; padding: 15px; border-radius: 8px; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #06C755; }
     .time-select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
     
-    .total-price { font-size: 22px; font-weight: bold; color: #d9534f; text-align: right; margin: 20px 0; }
-    button { width: 100%; padding: 14px; background-color: #06C755; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .total-price { font-size: 22px; font-weight: bold; color: #d9534f; text-align: right; margin: 20px 0 5px 0; }
+    .note { font-size: 12px; color: #555; line-height: 1.5; background: #f8f9fa; padding: 12px; border-radius: 4px; border: 1px solid #ddd; margin-bottom: 20px; }
+    
+    button { width: 100%; padding: 14px; background-color: #06C755; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
     button:disabled { background-color: #ccc; }
-    #loading { display: none; text-align: center; color: #666; margin-top: 15px; font-size: 14px; }
+    #loading { display: none; text-align: center; color: #666; margin-top: 5px; font-size: 14px; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>テイクアウト注文</h1>
     
-    <div id="menu-list">
-      <div class="menu-item" data-name="唐揚げ弁当" data-price="800">
-        <div class="menu-info">
-          <span class="menu-name">唐揚げ弁当</span>
-          <span class="menu-price">800円</span>
-        </div>
-        <select class="qty-select">
-          <option value="0">0個</option>
-          <option value="1">1個</option><option value="2">2個</option><option value="3">3個</option><option value="4">4個</option><option value="5">5個</option>
-        </select>
-      </div>
-
-      <div class="menu-item" data-name="焼肉弁当" data-price="900">
-        <div class="menu-info">
-          <span class="menu-name">焼肉弁当</span>
-          <span class="menu-price">900円</span>
-        </div>
-        <select class="qty-select">
-          <option value="0">0個</option>
-          <option value="1">1個</option><option value="2">2個</option><option value="3">3個</option><option value="4">4個</option><option value="5">5個</option>
-        </select>
-      </div>
-
-      <div class="menu-item" data-name="特製お茶" data-price="150">
-        <div class="menu-info">
-          <span class="menu-name">特製お茶 (500ml)</span>
-          <span class="menu-price">150円</span>
-        </div>
-        <select class="qty-select">
-          <option value="0">0本</option>
-          <option value="1">1本</option><option value="2">2本</option><option value="3">3本</option><option value="4">4本</option><option value="5">5本</option>
-        </select>
-      </div>
-    </div>
+    <div id="menu-list"></div>
     
     <div class="form-group">
-      <label>受け取り希望時間</label>
-      <select id="time" class="time-select">
-        <option value="11:30">11:30</option>
-        <option value="12:00">12:00</option>
-        <option value="12:30">12:30</option>
-        <option value="18:00">18:00</option>
-        <option value="18:30">18:30</option>
-      </select>
+      <label>🕙 受け取り希望時間</label>
+      <select id="time" class="time-select"></select>
     </div>
 
-    <div class="total-price">合計: <span id="total">0</span>円</div>
+    <div class="total-price">合計目安: <span id="total">0</span>円</div>
+    <div class="note">
+      お会計の際に税抜合計金額に税率をかけて税込価格を計算しています。<br>
+      複数個を同時に購入した場合、各商品に表示された税込価格の合計金額と差額が生じることがあります。
+    </div>
 
     <button id="submitBtn" onclick="submitOrder()">注文を確定する（店頭支払）</button>
     <div id="loading">処理中...しばらくお待ちください</div>
@@ -85,23 +56,110 @@
 
   <script>
     // ==========================================
-    // ★初期設定（必ずご自身のものに書き換えてください）
+    // ★ ここだけ必ずご自身のID・URLに書き換えてください
     // ==========================================
     const MY_LIFF_ID = '2009744200-VUfLrMWd'; 
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzM9oNEVa3SyCIi_cx94DxEF_BPKexdztAuSA_QHEWTwUdtOJMFzsXN5EbtkTurSKbdkg/exec';
 
-    // LIFFの初期化
+    // ==========================================
+    // ★ メニュー一覧
+    // 在庫切れにしたい商品の後ろに , soldOut: true を付け足すだけです。
+    // ==========================================
+    const menuData = [
+      { name: "和牛ミニコロッケ", price: 54 },
+      { name: "和牛コロッケ", price: 86 },
+      { name: "近江牛コロッケ", price: 130 },
+      { name: "エビフライ", price: 216 },
+      { name: "エビカツ", price: 324 },
+      { name: "ミニミンチカツ", price: 65 },
+      { name: "和牛入りミンチカツ", price: 130 },
+      { name: "近江牛ミンチカツ", price: 216 },
+      { name: "とんかつ（中）", price: 184 },
+      { name: "とんかつ（大）", price: 259 },
+      { name: "国産上とんかつ", price: 324 },
+      { name: "ハムカツ", price: 130 },
+      { name: "フライドポテト（小）", price: 130 },
+      { name: "フライドポテト（大）", price: 216 },
+      { name: "ひとくちヒレカツ", price: 86 },
+      { name: "ヒレカツ（大）", price: 259 },
+      { name: "チキンカツ", price: 194 },
+      { name: "フライドチキン", price: 238 },
+      { name: "からあげ（100ｇずつ）", price: 270 },
+      { name: "塩からあげ（100ｇずつ）", price: 238 },
+      { name: "カレーパン", price: 216 },
+      { name: "コーンボール", price: 65 },
+      { name: "じゃがチー", price: 49 },
+      { name: "チーズドッグ", price: 86 },
+      { name: "カニクリームコロッケ", price: 194 },
+      { name: "カキフライ", price: 108 },
+      { name: "牛タン串カツ", price: 108 },
+      { name: "とり串カツ", price: 162 },
+      { name: "ウインナー串カツ", price: 194 }
+    ];
+
     document.addEventListener("DOMContentLoaded", () => {
+      const menuListDiv = document.getElementById("menu-list");
+      
+      menuData.forEach(item => {
+        const itemDiv = document.createElement("div");
+        
+        // ★ 売り切れの場合は専用のクラス（sold-out）を追加
+        if (item.soldOut) {
+          itemDiv.className = "menu-item sold-out";
+        } else {
+          itemDiv.className = "menu-item";
+        }
+        
+        itemDiv.setAttribute("data-name", item.name);
+        itemDiv.setAttribute("data-price", item.price);
+        
+        // ★ 売り切れならプルダウンを押せなくする
+        let optionsHtml = "";
+        if (item.soldOut) {
+          optionsHtml = `<select class="qty-select" disabled><option value="0">0個</option></select>`;
+        } else {
+          for (let i = 0; i <= 50; i++) {
+            optionsHtml += `<option value="${i}">${i}個</option>`;
+          }
+          optionsHtml = `<select class="qty-select">${optionsHtml}</select>`;
+        }
+
+        itemDiv.innerHTML = `
+          <div class="menu-info">
+            <span class="menu-name">${item.name}</span>
+            <span class="menu-price">${item.price}円（税込）</span>
+          </div>
+          ${optionsHtml}
+        `;
+        menuListDiv.appendChild(itemDiv);
+      });
+
+      const timeSelect = document.getElementById("time");
+      for (let h = 9; h <= 17; h++) {
+        for (let m = 0; m < 60; m += 15) {
+          if (h === 9 && m < 30) continue;
+          if (h === 17 && m > 45) continue;
+          
+          const minStr = String(m).padStart(2, '0');
+          const timeStr = `${h}:${minStr}`;
+          
+          const option = document.createElement('option');
+          option.value = timeStr;
+          option.text = timeStr;
+          timeSelect.appendChild(option);
+        }
+      }
+
+      document.querySelectorAll('.qty-select').forEach(select => {
+        select.addEventListener('change', calcTotal);
+      });
+
       liff.init({ liffId: MY_LIFF_ID })
         .then(() => {
           if (!liff.isLoggedIn()) liff.login();
         })
         .catch(err => console.error(err));
     });
-
-    // 合計金額の自動計算（すべてのプルダウンを監視）
-    const qtySelects = document.querySelectorAll('.qty-select');
-    const totalSpan = document.getElementById("total");
 
     function calcTotal() {
       let total = 0;
@@ -110,38 +168,33 @@
         const qty = parseInt(item.querySelector('.qty-select').value, 10);
         total += price * qty;
       });
-      totalSpan.innerText = total;
+      document.getElementById("total").innerText = total;
     }
 
-    qtySelects.forEach(select => {
-      select.addEventListener('change', calcTotal);
-    });
-
-    // 注文送信処理
     async function submitOrder() {
-      if (!liff.isLoggedIn()) {
-        alert("LINEにログインしていません。");
-        return;
-      }
+      if (!liff.isLoggedIn()) { alert("LINEにログインしていません。"); return; }
 
       let orderText = "";
       let total = 0;
 
-      // 選択された商品を抽出してテキスト化
       document.querySelectorAll('.menu-item').forEach(item => {
+        // ★ 売り切れ商品は計算から除外
+        if(item.classList.contains('sold-out')) return; 
+
         const name = item.getAttribute('data-name');
         const price = parseInt(item.getAttribute('data-price'), 10);
         const qty = parseInt(item.querySelector('.qty-select').value, 10);
-        
         if (qty > 0) {
-          orderText += `${name} x${qty}\n`;
+          orderText += `${name} x${qty}個\n`;
           total += price * qty;
         }
       });
 
-      if (total === 0) {
-        alert("商品が選択されていません。個数を指定してください。");
-        return;
+      if (total === 0) { alert("商品が選択されていません。個数を指定してください。"); return; }
+
+      const confirmMsg = "ご注文を確定しますか？\n\n※お会計時、税抜合計からの消費税計算により、表示の合計金額と差額が生じる場合がございます。";
+      if (!confirm(confirmMsg)) {
+        return; 
       }
 
       const btn = document.getElementById("submitBtn");
@@ -151,12 +204,11 @@
 
       try {
         const profile = await liff.getProfile();
-        
         const payload = {
           lineId: profile.userId,
           name: profile.displayName,
           time: document.getElementById("time").value,
-          orderText: orderText.trim(), // まとめたテキストを送信
+          orderText: orderText.trim(),
           total: total
         };
 
@@ -167,7 +219,6 @@
         });
 
         const result = await res.json();
-
         if (result.status === "success") {
           alert("ご注文を承りました！お店でお待ちしております。");
           liff.closeWindow();
@@ -175,7 +226,7 @@
           throw new Error(result.message);
         }
       } catch (error) {
-        alert("注文の送信に失敗しました。時間をおいて再度お試しください。");
+        alert("通信エラーが発生しました。時間をおいて再度お試しください。");
         btn.disabled = false;
         loading.style.display = "none";
       }

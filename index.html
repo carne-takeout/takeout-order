@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>テイクアウト注文</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background-color: #f5f5f5; color: #333; }
+    .container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h1 { font-size: 20px; text-align: center; margin-top: 0; border-bottom: 2px solid #06C755; padding-bottom: 10px; }
+    
+    /* メニュー一覧のデザイン */
+    .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
+    .menu-info { display: flex; flex-direction: column; }
+    .menu-name { font-weight: bold; font-size: 16px; }
+    .menu-price { color: #666; font-size: 14px; margin-top: 4px; }
+    .menu-item select { width: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+    
+    .form-group { margin-top: 20px; margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; }
+    .time-select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
+    
+    .total-price { font-size: 22px; font-weight: bold; color: #d9534f; text-align: right; margin: 20px 0; }
+    button { width: 100%; padding: 14px; background-color: #06C755; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    button:disabled { background-color: #ccc; }
+    #loading { display: none; text-align: center; color: #666; margin-top: 15px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>テイクアウト注文</h1>
+    
+    <div id="menu-list">
+      <div class="menu-item" data-name="唐揚げ弁当" data-price="800">
+        <div class="menu-info">
+          <span class="menu-name">唐揚げ弁当</span>
+          <span class="menu-price">800円</span>
+        </div>
+        <select class="qty-select">
+          <option value="0">0個</option>
+          <option value="1">1個</option><option value="2">2個</option><option value="3">3個</option><option value="4">4個</option><option value="5">5個</option>
+        </select>
+      </div>
+
+      <div class="menu-item" data-name="焼肉弁当" data-price="900">
+        <div class="menu-info">
+          <span class="menu-name">焼肉弁当</span>
+          <span class="menu-price">900円</span>
+        </div>
+        <select class="qty-select">
+          <option value="0">0個</option>
+          <option value="1">1個</option><option value="2">2個</option><option value="3">3個</option><option value="4">4個</option><option value="5">5個</option>
+        </select>
+      </div>
+
+      <div class="menu-item" data-name="特製お茶" data-price="150">
+        <div class="menu-info">
+          <span class="menu-name">特製お茶 (500ml)</span>
+          <span class="menu-price">150円</span>
+        </div>
+        <select class="qty-select">
+          <option value="0">0本</option>
+          <option value="1">1本</option><option value="2">2本</option><option value="3">3本</option><option value="4">4本</option><option value="5">5本</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label>受け取り希望時間</label>
+      <select id="time" class="time-select">
+        <option value="11:30">11:30</option>
+        <option value="12:00">12:00</option>
+        <option value="12:30">12:30</option>
+        <option value="18:00">18:00</option>
+        <option value="18:30">18:30</option>
+      </select>
+    </div>
+
+    <div class="total-price">合計: <span id="total">0</span>円</div>
+
+    <button id="submitBtn" onclick="submitOrder()">注文を確定する（店頭支払）</button>
+    <div id="loading">処理中...しばらくお待ちください</div>
+  </div>
+
+  <script>
+    // ==========================================
+    // ★初期設定（必ずご自身のものに書き換えてください）
+    // ==========================================
+    const MY_LIFF_ID = '2009744200-VUfLrMWd'; 
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzM9oNEVa3SyCIi_cx94DxEF_BPKexdztAuSA_QHEWTwUdtOJMFzsXN5EbtkTurSKbdkg/exec';
+
+    // LIFFの初期化
+    document.addEventListener("DOMContentLoaded", () => {
+      liff.init({ liffId: MY_LIFF_ID })
+        .then(() => {
+          if (!liff.isLoggedIn()) liff.login();
+        })
+        .catch(err => console.error(err));
+    });
+
+    // 合計金額の自動計算（すべてのプルダウンを監視）
+    const qtySelects = document.querySelectorAll('.qty-select');
+    const totalSpan = document.getElementById("total");
+
+    function calcTotal() {
+      let total = 0;
+      document.querySelectorAll('.menu-item').forEach(item => {
+        const price = parseInt(item.getAttribute('data-price'), 10);
+        const qty = parseInt(item.querySelector('.qty-select').value, 10);
+        total += price * qty;
+      });
+      totalSpan.innerText = total;
+    }
+
+    qtySelects.forEach(select => {
+      select.addEventListener('change', calcTotal);
+    });
+
+    // 注文送信処理
+    async function submitOrder() {
+      if (!liff.isLoggedIn()) {
+        alert("LINEにログインしていません。");
+        return;
+      }
+
+      let orderText = "";
+      let total = 0;
+
+      // 選択された商品を抽出してテキスト化
+      document.querySelectorAll('.menu-item').forEach(item => {
+        const name = item.getAttribute('data-name');
+        const price = parseInt(item.getAttribute('data-price'), 10);
+        const qty = parseInt(item.querySelector('.qty-select').value, 10);
+        
+        if (qty > 0) {
+          orderText += `${name} x${qty}\n`;
+          total += price * qty;
+        }
+      });
+
+      if (total === 0) {
+        alert("商品が選択されていません。個数を指定してください。");
+        return;
+      }
+
+      const btn = document.getElementById("submitBtn");
+      const loading = document.getElementById("loading");
+      btn.disabled = true;
+      loading.style.display = "block";
+
+      try {
+        const profile = await liff.getProfile();
+        
+        const payload = {
+          lineId: profile.userId,
+          name: profile.displayName,
+          time: document.getElementById("time").value,
+          orderText: orderText.trim(), // まとめたテキストを送信
+          total: total
+        };
+
+        const res = await fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+
+        if (result.status === "success") {
+          alert("ご注文を承りました！お店でお待ちしております。");
+          liff.closeWindow();
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (error) {
+        alert("注文の送信に失敗しました。時間をおいて再度お試しください。");
+        btn.disabled = false;
+        loading.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -16,7 +16,6 @@
     .menu-price { color: #666; font-size: 13px; margin-top: 4px; }
     .menu-item select { width: 85px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
     
-    /* ★売り切れ時のデザイン設定を追加 */
     .sold-out { opacity: 0.5; background-color: #fbfbfb; }
     .sold-out .menu-name::after { content: "（完売）"; color: #d9534f; font-size: 12px; margin-left: 8px; font-weight: bold; }
     .sold-out select { background-color: #eee; color: #999; }
@@ -63,11 +62,10 @@
 
     // ==========================================
     // ★ メニュー一覧
-    // 在庫切れにしたい商品の後ろに , soldOut: true を付け足すだけです。
     // ==========================================
     const menuData = [
       { name: "和牛ミニコロッケ", price: 54 },
-      { name: "和牛コロッケ", price: 86 },
+      { name: "和牛コロッケ", price: 86 }, 
       { name: "近江牛コロッケ", price: 130 },
       { name: "エビフライ", price: 216 },
       { name: "エビカツ", price: 324 },
@@ -103,7 +101,6 @@
       menuData.forEach(item => {
         const itemDiv = document.createElement("div");
         
-        // ★ 売り切れの場合は専用のクラス（sold-out）を追加
         if (item.soldOut) {
           itemDiv.className = "menu-item sold-out";
         } else {
@@ -113,7 +110,6 @@
         itemDiv.setAttribute("data-name", item.name);
         itemDiv.setAttribute("data-price", item.price);
         
-        // ★ 売り切れならプルダウンを押せなくする
         let optionsHtml = "";
         if (item.soldOut) {
           optionsHtml = `<select class="qty-select" disabled><option value="0">0個</option></select>`;
@@ -178,7 +174,6 @@
       let total = 0;
 
       document.querySelectorAll('.menu-item').forEach(item => {
-        // ★ 売り切れ商品は計算から除外
         if(item.classList.contains('sold-out')) return; 
 
         const name = item.getAttribute('data-name');
@@ -192,7 +187,7 @@
 
       if (total === 0) { alert("商品が選択されていません。個数を指定してください。"); return; }
 
-      const confirmMsg = "ご注文を確定しますか？\n\n※お会計時、税抜合計からの消費税計算により、表示の合計金額と差額が生じる場合がございます。";
+      const confirmMsg = "ご注文を送信しますか？\n\n※お会計時、税抜合計からの消費税計算により、表示の合計金額と差額が生じる場合がございます。";
       if (!confirm(confirmMsg)) {
         return; 
       }
@@ -204,9 +199,13 @@
 
       try {
         const profile = await liff.getProfile();
+        
+        const orderNo = Math.floor(1000 + Math.random() * 9000);
+        
         const payload = {
           lineId: profile.userId,
-          name: profile.displayName,
+          // ★ ここを「受付番号」に修正しました
+          name: `${profile.displayName} 【受付番号:${orderNo}】`, 
           time: document.getElementById("time").value,
           orderText: orderText.trim(),
           total: total
@@ -220,7 +219,7 @@
 
         const result = await res.json();
         if (result.status === "success") {
-          alert("ご注文を承りました！お店でお待ちしております。");
+          alert(`ご注文を送信しました！\n\nあなたの受付番号は【 ${orderNo} 】です。\n\n※お店からの「確定LINE」が届くまでお待ちください。店頭ではこの番号をお伝えください。`);
           liff.closeWindow();
         } else {
           throw new Error(result.message);

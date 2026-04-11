@@ -54,82 +54,68 @@
   </div>
 
   <script>
-    // ==========================================
-    // ★ ここだけ必ずご自身のID・URLに書き換えてください
-    // ==========================================
     const MY_LIFF_ID = '2009744200-VUfLrMWd'; 
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzM9oNEVa3SyCIi_cx94DxEF_BPKexdztAuSA_QHEWTwUdtOJMFzsXN5EbtkTurSKbdkg/exec';
 
-    // ==========================================
-    // ★ メニュー一覧
-    // ==========================================
-    const menuData = [
-      { name: "和牛ミニコロッケ", price: 54 },
-      { name: "和牛コロッケ", price: 86 }, 
-      { name: "近江牛コロッケ", price: 130 },
-      { name: "エビフライ", price: 216 },
-      { name: "エビカツ", price: 324 },
-      { name: "ミニミンチカツ", price: 65 },
-      { name: "和牛入りミンチカツ", price: 130 },
-      { name: "近江牛ミンチカツ", price: 216 },
-      { name: "とんかつ（中）", price: 184 },
-      { name: "とんかつ（大）", price: 259 },
-      { name: "国産上とんかつ", price: 324 },
-      { name: "ハムカツ", price: 130 },
-      { name: "フライドポテト（小）", price: 130 },
-      { name: "フライドポテト（大）", price: 216 },
-      { name: "ひとくちヒレカツ", price: 86 },
-      { name: "ヒレカツ（大）", price: 259 },
-      { name: "チキンカツ", price: 194 },
-      { name: "フライドチキン", price: 238 },
-      { name: "からあげ（100ｇずつ）", price: 270 },
-      { name: "塩からあげ（100ｇずつ）", price: 238 },
-      { name: "カレーパン", price: 216 },
-      { name: "コーンボール", price: 65 },
-      { name: "じゃがチー", price: 49 },
-      { name: "チーズドッグ", price: 86 },
-      { name: "カニクリームコロッケ", price: 194 },
-      { name: "カキフライ", price: 108 },
-      { name: "牛タン串カツ", price: 108 },
-      { name: "とり串カツ", price: 162 },
-      { name: "ウインナー串カツ", price: 194 }
-    ];
-
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
       const menuListDiv = document.getElementById("menu-list");
       
-      menuData.forEach(item => {
-        const itemDiv = document.createElement("div");
+      // スプレッドシートから読み込んでいる間のメッセージ
+      menuListDiv.innerHTML = "<p style='text-align:center; padding: 20px 0; color: #666;'>メニューを読み込み中...</p>";
+
+      try {
+        // ★ GASへアクセスし、スプレッドシートの「メニュー」シートのデータを取得
+        const res = await fetch(GAS_URL);
+        const menuData = await res.json();
         
-        if (item.soldOut) {
-          itemDiv.className = "menu-item sold-out";
-        } else {
-          itemDiv.className = "menu-item";
-        }
-        
-        itemDiv.setAttribute("data-name", item.name);
-        itemDiv.setAttribute("data-price", item.price);
-        
-        let optionsHtml = "";
-        if (item.soldOut) {
-          optionsHtml = `<select class="qty-select" disabled><option value="0">0個</option></select>`;
-        } else {
-          for (let i = 0; i <= 50; i++) {
-            optionsHtml += `<option value="${i}">${i}個</option>`;
+        // 読み込み完了後、メッセージを消す
+        menuListDiv.innerHTML = "";
+
+        // 取得したデータをもとにメニューを描画
+        menuData.forEach(item => {
+          const itemDiv = document.createElement("div");
+          
+          if (item.soldOut) {
+            itemDiv.className = "menu-item sold-out";
+          } else {
+            itemDiv.className = "menu-item";
           }
-          optionsHtml = `<select class="qty-select">${optionsHtml}</select>`;
-        }
+          
+          itemDiv.setAttribute("data-name", item.name);
+          itemDiv.setAttribute("data-price", item.price);
+          
+          let optionsHtml = "";
+          if (item.soldOut) {
+            optionsHtml = `<select class="qty-select" disabled><option value="0">0個</option></select>`;
+          } else {
+            for (let i = 0; i <= 50; i++) {
+              optionsHtml += `<option value="${i}">${i}個</option>`;
+            }
+            optionsHtml = `<select class="qty-select">${optionsHtml}</select>`;
+          }
 
-        itemDiv.innerHTML = `
-          <div class="menu-info">
-            <span class="menu-name">${item.name}</span>
-            <span class="menu-price">${item.price}円（税込）</span>
-          </div>
-          ${optionsHtml}
-        `;
-        menuListDiv.appendChild(itemDiv);
-      });
+          itemDiv.innerHTML = `
+            <div class="menu-info">
+              <span class="menu-name">${item.name}</span>
+              <span class="menu-price">${item.price}円（税込）</span>
+            </div>
+            ${optionsHtml}
+          `;
+          menuListDiv.appendChild(itemDiv);
+        });
 
+        // 描画後、個数変更時の計算イベントをセット
+        document.querySelectorAll('.qty-select').forEach(select => {
+          select.addEventListener('change', calcTotal);
+        });
+
+      } catch (error) {
+        // GAS側のエラーや通信障害時のフォールバック
+        menuListDiv.innerHTML = "<p style='text-align:center; color:#d9534f; font-weight:bold;'>メニューの読み込みに失敗しました。<br>通信環境を確認して再度開き直してください。</p>";
+        console.error("メニュー取得エラー:", error);
+      }
+
+      // 既存の時間の生成処理
       const timeSelect = document.getElementById("time");
       for (let h = 9; h <= 17; h++) {
         for (let m = 0; m < 60; m += 15) {
@@ -146,10 +132,7 @@
         }
       }
 
-      document.querySelectorAll('.qty-select').forEach(select => {
-        select.addEventListener('change', calcTotal);
-      });
-
+      // LIFFの初期化
       liff.init({ liffId: MY_LIFF_ID })
         .then(() => {
           if (!liff.isLoggedIn()) liff.login();
@@ -157,6 +140,7 @@
         .catch(err => console.error(err));
     });
 
+    // 以下の関数は既存のまま変更なし
     function calcTotal() {
       let total = 0;
       document.querySelectorAll('.menu-item').forEach(item => {
@@ -204,7 +188,6 @@
         
         const payload = {
           lineId: profile.userId,
-          // ★ ここを「受付番号」に修正しました
           name: `${profile.displayName} 【受付番号:${orderNo}】`, 
           time: document.getElementById("time").value,
           orderText: orderText.trim(),

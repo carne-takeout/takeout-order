@@ -30,6 +30,9 @@
     button { width: 100%; padding: 14px; background-color: #06C755; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
     button:disabled { background-color: #ccc; }
     #loading { display: none; text-align: center; color: #666; margin-top: 5px; font-size: 14px; }
+
+    /* 休業日用のスタイル */
+    .closed-message { text-align: center; padding: 30px 10px; color: #d9534f; font-weight: bold; font-size: 18px; line-height: 1.6; background-color: #fdf2f2; border-radius: 8px; margin-bottom: 20px; }
   </style>
 </head>
 <body>
@@ -62,19 +65,38 @@
 
     document.addEventListener("DOMContentLoaded", async () => {
       const menuListDiv = document.getElementById("menu-list");
+      const timeSelect = document.getElementById("time");
+      const submitBtn = document.getElementById("submitBtn");
       
-      // スプレッドシートから読み込んでいる間のメッセージ
-      menuListDiv.innerHTML = "<p style='text-align:center; padding: 20px 0; color: #666;'>メニューを読み込み中...</p>";
+      menuListDiv.innerHTML = "<p style='text-align:center; padding: 20px 0; color: #666;'>メニュー情報を読み込み中...</p>";
 
       try {
-        // GASへアクセスし、スプレッドシートの「メニュー」シートのデータを取得
         const res = await fetch(GAS_URL);
-        const menuData = await res.json();
+        const data = await res.json();
         
-        // 読み込み完了後、メッセージを消す
-        menuListDiv.innerHTML = "";
+        // GASからメニュー配列と臨時休業フラグを受け取る
+        const menuData = data.menus;
+        const isTemporaryClosed = data.isTemporaryClosed;
 
-        // 取得したデータをもとにメニューを描画
+        // ★曜日チェック（0が日曜日、3が水曜日）
+        const now = new Date();
+        const dayOfWeek = now.getDay(); 
+        
+        // 休業日ブロック判定
+        if (isTemporaryClosed) {
+          menuListDiv.innerHTML = "<div class='closed-message'>誠に勝手ながら<br>本日は「臨時休業」と<br>させていただいております。</div>";
+          timeSelect.disabled = true;
+          submitBtn.disabled = true;
+          return; // ここで処理を止めてメニューを描画させない
+        } else if (dayOfWeek === 0 || dayOfWeek === 3) {
+          menuListDiv.innerHTML = "<div class='closed-message'>本日は定休日（日・水）のため<br>ご注文を受付しておりません。</div>";
+          timeSelect.disabled = true;
+          submitBtn.disabled = true;
+          return; // ここで処理を止めてメニューを描画させない
+        }
+
+        // 営業日の場合は通常通りメニューを描画
+        menuListDiv.innerHTML = "";
         menuData.forEach(item => {
           const itemDiv = document.createElement("div");
           
@@ -107,53 +129,47 @@
           menuListDiv.appendChild(itemDiv);
         });
 
-        // 描画後、個数変更時の計算イベントをセット
         document.querySelectorAll('.qty-select').forEach(select => {
           select.addEventListener('change', calcTotal);
         });
 
-      } catch (error) {
-        // GAS側のエラーや通信障害時のフォールバック
-        menuListDiv.innerHTML = "<p style='text-align:center; color:#d9534f; font-weight:bold;'>メニューの読み込みに失敗しました。<br>通信環境を確認して再度開き直してください。</p>";
-        console.error("メニュー取得エラー:", error);
-      }
+        // 時間の生成処理（現在時刻＋15分以降のみ表示）
+        now.setMinutes(now.getMinutes() + 15);
+        const thresholdHour = now.getHours();
+        const thresholdMinute = now.getMinutes();
+        let addedCount = 0;
 
-      // 時間の生成処理（現在時刻＋15分以降のみ表示する）
-      const timeSelect = document.getElementById("time");
-      const now = new Date();
-      now.setMinutes(now.getMinutes() + 15); // 現在時刻に15分を足す
-      const thresholdHour = now.getHours();
-      const thresholdMinute = now.getMinutes();
-      let addedCount = 0;
-
-      for (let h = 9; h <= 17; h++) {
-        for (let m = 0; m < 60; m += 15) {
-          if (h === 9 && m < 30) continue; // 営業開始 9:30
-          if (h === 17 && m > 45) continue; // 営業終了 17:45
-          
-          // 計算した最短時間よりも前の時間はスキップする
-          if (h < thresholdHour || (h === thresholdHour && m < thresholdMinute)) {
-            continue; 
+        for (let h = 9; h <= 17; h++) {
+          for (let m = 0; m < 60; m += 15) {
+            if (h === 9 && m < 30) continue; 
+            if (h === 17 && m > 45) continue; 
+            
+            if (h < thresholdHour || (h === thresholdHour && m < thresholdMinute)) {
+              continue; 
+            }
+            
+            const minStr = String(m).padStart(2, '0');
+            const timeStr = `${h}:${minStr}`;
+            
+            const option = document.createElement('option');
+            option.value = timeStr;
+            option.text = timeStr;
+            timeSelect.appendChild(option);
+            addedCount++;
           }
-          
-          const minStr = String(m).padStart(2, '0');
-          const timeStr = `${h}:${minStr}`;
-          
-          const option = document.createElement('option');
-          option.value = timeStr;
-          option.text = timeStr;
-          timeSelect.appendChild(option);
-          addedCount++;
         }
-      }
 
-      // 本日の営業時間が終了していて選択肢が0個になった場合の処理
-      if (addedCount === 0) {
-        const option = document.createElement('option');
-        option.text = "本日の受付は終了しました";
-        timeSelect.appendChild(option);
-        timeSelect.disabled = true; // プルダウンを操作不可に
-        document.getElementById("submitBtn").disabled = true; // 注文ボタンも押せないようにする
+        if (addedCount === 0) {
+          const option = document.createElement('option');
+          option.text = "本日の受付は終了しました";
+          timeSelect.appendChild(option);
+          timeSelect.disabled = true;
+          submitBtn.disabled = true;
+        }
+
+      } catch (error) {
+        menuListDiv.innerHTML = "<p style='text-align:center; color:#d9534f; font-weight:bold;'>読み込みに失敗しました。<br>通信環境を確認して再度開き直してください。</p>";
+        console.error("データ取得エラー:", error);
       }
 
       // LIFFの初期化
@@ -206,7 +222,6 @@
 
       try {
         const profile = await liff.getProfile();
-        
         const orderNo = Math.floor(1000 + Math.random() * 9000);
         
         const payload = {

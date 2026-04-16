@@ -3,25 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>テイクアウト注文</title>
+  <title>テイクアウト注文（本日分のみ）</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; background-color: #f5f5f5; color: #333; }
     .container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     h1 { font-size: 20px; text-align: center; margin-top: 0; border-bottom: 2px solid #06C755; padding-bottom: 10px; }
+    .today-badge { background: #06C755; color: white; font-size: 12px; padding: 2px 8px; border-radius: 4px; vertical-align: middle; margin-right: 5px; }
+    
     .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
     .menu-info { display: flex; flex-direction: column; width: 65%; }
     .menu-name { font-weight: bold; font-size: 15px; word-wrap: break-word; }
     .menu-price { color: #666; font-size: 13px; margin-top: 4px; }
     .menu-item select { width: 85px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+    
     .sold-out { opacity: 0.5; background-color: #fbfbfb; }
     .sold-out .menu-name::after { content: "（完売）"; color: #d9534f; font-size: 12px; margin-left: 8px; font-weight: bold; }
-    .sold-out select { background-color: #eee; color: #999; }
+
     .form-group { margin-top: 25px; margin-bottom: 20px; background-color: #eafbee; padding: 15px; border-radius: 8px; }
     label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #06C755; }
     .time-select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
+    
     .total-price { font-size: 22px; font-weight: bold; color: #d9534f; text-align: right; margin: 20px 0 5px 0; }
-    .note { font-size: 12px; color: #555; line-height: 1.5; background: #f8f9fa; padding: 12px; border-radius: 4px; border: 1px solid #ddd; margin-bottom: 20px; }
+    
+    /* 注意事項・キャンセルポリシーのスタイル */
+    .policy-box { font-size: 12px; color: #d9534f; line-height: 1.5; background: #fff5f5; padding: 12px; border-radius: 4px; border: 1px solid #feb2b2; margin-bottom: 15px; }
+    .policy-title { font-weight: bold; display: block; margin-bottom: 5px; text-decoration: underline; }
+    
+    .note { font-size: 11px; color: #666; line-height: 1.4; margin-bottom: 20px; }
+    
     button { width: 100%; padding: 14px; background-color: #06C755; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
     button:disabled { background-color: #ccc; }
     #loading { display: none; text-align: center; color: #666; margin-top: 5px; font-size: 14px; }
@@ -30,15 +40,28 @@
 </head>
 <body>
   <div class="container">
-    <h1>テイクアウト注文</h1>
+    <h1><span class="today-badge">本日分のみ</span>テイクアウト注文</h1>
+    
     <div id="menu-list"></div>
+    
     <div class="form-group">
-      <label>🕙 受け取り希望時間</label>
+      <label>🕙 本日のお受け取り希望時間</label>
       <select id="time" class="time-select"></select>
-      <p style="font-size: 12px; color: #d9534f; margin-top: 8px; font-weight: bold;">※混雑状況により、ご指定のお時間より少々お待たせする場合がございます。</p>
+      <p style="font-size: 12px; color: #d9534f; margin-top: 8px; font-weight: bold;">※混雑状況により、少々お待たせする場合がございます。</p>
     </div>
+
     <div class="total-price">合計目安: <span id="total">0</span>円</div>
-    <div class="note">お会計の際に税抜合計金額に税率をかけて税込価格を計算しています。<br>複数個を同時に購入した場合、表示金額と差額が生じることがあります。</div>
+
+    <div class="policy-box">
+      <span class="policy-title">キャンセル・受取時間の変更について</span>
+      ご注文のキャンセルや内容の変更、ならびに<strong>【受取時間の変更】</strong>は、お受け取り時間の30分前までに必ずお電話にてご連絡ください。<br>
+      それ以降のキャンセルにつきましては、代金の全額を頂戴する場合がございます。あらかじめご了承ください。
+    </div>
+
+    <div class="note">
+      お会計の際に税抜合計金額に税率をかけて税込価格を計算しています。表示の合計金額と数円の差額が生じることがあります。
+    </div>
+
     <button id="submitBtn" onclick="submitOrder()">注文を確定する（店頭支払）</button>
     <div id="loading">処理中...しばらくお待ちください</div>
   </div>
@@ -46,7 +69,7 @@
   <script>
     const MY_LIFF_ID = '2009744200-VUfLrMWd'; 
     
-    // ★★★ 以下の '' の中に、必ず現在動いている本物のGAS URLを貼り付けてください ★★★
+    // ★★★ 以下の '' の中に、現在動いている本物のGAS URLを貼り付けてください ★★★
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbz0fue0Ff30ruyulZ0vKSae2qtOQSASXuO3fGyZGqcU2g3RRu5V7I5zpd85jOTzVrpSeQ/exec';
 
     document.addEventListener("DOMContentLoaded", async () => {
@@ -71,14 +94,11 @@
         const isTakeoutPaused = data.isTakeoutPaused;
         const dayOfWeek = new Date().getDay(); 
         
-        // ★条件分岐：お店が休みの場合（日・水、または店舗休業設定）
         if (dayOfWeek === 0 || dayOfWeek === 3 || isStoreClosed) {
-          menuListDiv.innerHTML = "<div class='closed-message'>本日は【店舗休業日】のため、<br>ご注文を受付しておりません。<br><br><span style='font-size: 14px; font-weight: normal; color: #666;'>またのご来店をお待ちしております。</span></div>";
+          menuListDiv.innerHTML = "<div class='closed-message'>本日は【店舗休業日】のため、<br>ご注文を受付しておりません。</div>";
           timeSelect.disabled = true; submitBtn.disabled = true; return;
-        } 
-        // ★条件分岐：お店は開いているが、テイクアウトのみ休む場合
-        else if (isTakeoutPaused) {
-          menuListDiv.innerHTML = "<div class='closed-message'>誠に勝手ながら、本日の<br>【テイクアウトのご注文】は<br>お休みさせていただきます。<br><br><span style='font-size: 14px; font-weight: normal; color: #666;'>※店舗自体の営業につきましては、<br>お知らせ等をご確認ください。</span></div>";
+        } else if (isTakeoutPaused) {
+          menuListDiv.innerHTML = "<div class='closed-message'>誠に勝手ながら、本日の<br>【テイクアウトのご注文】は<br>お休みさせていただきます。</div>";
           timeSelect.disabled = true; submitBtn.disabled = true; return;
         }
 
@@ -142,8 +162,10 @@
           total += parseInt(item.getAttribute('data-price'), 10) * qty;
         }
       });
-      if (total === 0) { alert("商品が選択されていません。"); return; }
-      if (!confirm("ご注文を送信しますか？\n\n※お会計時、税抜合計からの消費税計算により差額が生じる場合がございます。")) return; 
+      if (total === 0) { alert("商品が選択されていません。個数を指定してください。"); return; }
+      
+      // ★ダイアログでの注意書きも変更
+      if (!confirm("ご注文を送信しますか？\n\n※確定後のキャンセル・受取時間の変更はお電話のみとなります。")) return; 
       
       const btn = document.getElementById("submitBtn"), loading = document.getElementById("loading");
       btn.disabled = true; loading.style.display = "block";
@@ -157,7 +179,7 @@
         });
         const result = await res.json();
         if (result.status === "success") {
-          alert(`ご注文を送信しました！\n\n受付番号:【 ${orderNo} 】\n\n確定LINEをお待ちください。`);
+          alert(`ご注文を送信しました！\n\n受付番号:【 ${orderNo} 】\n\n※これより調理に入ります。時間変更・キャンセルはお早めにお電話ください。`);
           liff.closeWindow();
         } else throw new Error(result.message);
       } catch (error) {

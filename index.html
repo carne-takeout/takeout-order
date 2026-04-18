@@ -179,7 +179,7 @@
         });
         const result = await res.json();
         if (result.status === "success") {
-          alert(`ご注文を送信しました！\n\n受付番号:【 ${orderNo} 】\n\n※これより調理に入ります。時間変更・キャンセルはお早めにお電話ください。`);
+          alert(`ご注文を送信しました！\n\n受付番号:【 ${orderNo} 】\n\n店舗からの「受付完了」の返信をもって注文確定となります。\n\n※確定後の時間変更・キャンセルはお電話のみとなります。`);
           liff.closeWindow();
         } else throw new Error(result.message);
       } catch (error) {

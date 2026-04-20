@@ -111,6 +111,7 @@
 
         // 2. 受付可能時間の算出（メニュー表示の前に計算するよう変更）
         const now = new Date();
+        now.setHours(10, 0, 0); // ★テスト用：強制的に10時に設定
         now.setMinutes(now.getMinutes() + 15);
         let availableTimes = [];
 

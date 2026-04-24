@@ -109,14 +109,14 @@
           return;
         }
 
-        // 2. 受付可能時間の算出（メニュー表示の前に計算するよう変更）
+// 2. 受付可能時間の算出（メニュー表示の前に計算するよう変更）
         const now = new Date();
         now.setMinutes(now.getMinutes() + 15);
         let availableTimes = [];
 
-        for (let h = 9; h <= 17; h++) {
+        for (let h = 10; h <= 17; h++) {
           for (let m = 0; m < 60; m += 15) {
-            if ((h === 9 && m < 30) || (h === 17 && m > 45)) continue; 
+            if (h === 17 && m > 45) continue; 
             if (h < now.getHours() || (h === now.getHours() && m < now.getMinutes())) continue; 
             
             availableTimes.push(`${h}:${String(m).padStart(2, '0')}`);
